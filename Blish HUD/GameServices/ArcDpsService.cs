@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Threading;
 using Blish_HUD.ArcDps;
+using Blish_HUD.GameServices.ArcDps;
 using Microsoft.Xna.Framework;
 
 namespace Blish_HUD
@@ -16,7 +17,7 @@ namespace Blish_HUD
         private readonly TimeSpan _leeway = TimeSpan.FromMilliseconds(1000);
         private bool _hudIsActive;
 
-        private SocketListener _server;
+        private IArcDpsListener _server;
 
         private Stopwatch _stopwatch;
 
@@ -63,7 +64,8 @@ namespace Blish_HUD
         protected override void Initialize()
         {
             _stopwatch = new Stopwatch();
-            _server = new SocketListener(10, 200_000);
+            //_server = new SocketListener(10, 200_000);
+            _server = new PipeListener();
             _server.ReceivedMessage += MessageHandler;
 #if DEBUG
             RawCombatEvent += (a, b) => { Interlocked.Increment(ref Counter); };
@@ -72,7 +74,7 @@ namespace Blish_HUD
 
         protected override void Load()
         {
-            _server.Start(new IPEndPoint(IPAddress.Loopback, 8214));
+            _server.Start();
             _stopwatch.Start();
         }
 

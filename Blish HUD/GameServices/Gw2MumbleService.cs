@@ -66,7 +66,7 @@ namespace Blish_HUD {
                         _delayedTicks += 1;
                     }
                 } catch (NullReferenceException ex) /* [BLISHHUD-X] */ {
-                    Console.WriteLine("Mumble connection failed.");
+                    //Console.WriteLine("Mumble connection failed.");
                     _mumbleBacking = null;
                 } catch (SerializationException ex) /* [BLISHHUD-10] */ {
                     Console.WriteLine("Failed to deserialize Mumble API structure.");

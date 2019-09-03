@@ -5,9 +5,10 @@ using System.Threading;
 
 namespace Blish_HUD.ArcDps
 {
-    public sealed class SocketListener
+    public sealed class SocketListener : IArcDpsListener
     {
         public delegate void Message(MessageData data);
+        public IPEndPoint LocalEndPoint { get; set; } = new IPEndPoint(IPAddress.Loopback, 8214);
 
         private const int MESSAGE_HEADER_SIZE = 8;
 
@@ -37,13 +38,13 @@ namespace Blish_HUD.ArcDps
 
         public event Message ReceivedMessage;
 
-        public void Start(IPEndPoint localEndPoint)
+        public void Start()
         {
-            _listenSocket = new Socket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
+            _listenSocket = new Socket(LocalEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp)
             {
                 ReceiveBufferSize = _bufferSize
             };
-            _listenSocket.Bind(localEndPoint);
+            _listenSocket.Bind(LocalEndPoint);
             _listenSocket.Listen(_maxConnectionCount);
             StartAccept(null);
             Mutex.WaitOne();
@@ -127,7 +128,7 @@ namespace Blish_HUD.ArcDps
                 {
                     if (!(e.UserToken is AsyncUserToken token)) return;
                     ProcessReceivedData(token.DataStartOffset,
-                        token.NextReceiveOffset - token.DataStartOffset + e.BytesTransferred, 0, token, e);
+                        token.NextReceiveOffset - token.DataStartOffset + e.BytesTransferred, 0, token, e.Buffer);
 
                     token.NextReceiveOffset += e.BytesTransferred;
 
@@ -160,7 +161,7 @@ namespace Blish_HUD.ArcDps
         }
 
         private void ProcessReceivedData(int dataStartOffset, int totalReceivedDataSize, int alreadyProcessedDataSize,
-            AsyncUserToken token, SocketAsyncEventArgs e)
+            AsyncUserToken token, byte[] buffer)
         {
             while (true)
             {
@@ -171,7 +172,7 @@ namespace Blish_HUD.ArcDps
                     if (totalReceivedDataSize - alreadyProcessedDataSize > MESSAGE_HEADER_SIZE)
                     {
                         var headerData = new byte[MESSAGE_HEADER_SIZE];
-                        Buffer.BlockCopy(e.Buffer, dataStartOffset, headerData, 0, MESSAGE_HEADER_SIZE);
+                        Buffer.BlockCopy(buffer, dataStartOffset, headerData, 0, MESSAGE_HEADER_SIZE);
                         var messageSize = BitConverter.ToInt32(headerData, 0);
 
                         token.MessageSize = messageSize;
@@ -188,8 +189,8 @@ namespace Blish_HUD.ArcDps
                     if (totalReceivedDataSize - alreadyProcessedDataSize >= messageSize)
                     {
                         var messageData = new byte[messageSize];
-                        Buffer.BlockCopy(e.Buffer, dataStartOffset, messageData, 0, messageSize);
-                        ProcessMessage(messageData, token, e);
+                        Buffer.BlockCopy(buffer, dataStartOffset, messageData, 0, messageSize);
+                        ProcessMessage(messageData, token);
 
                         token.DataStartOffset = dataStartOffset + messageSize;
                         token.MessageSize = null;
@@ -204,7 +205,7 @@ namespace Blish_HUD.ArcDps
             }
         }
 
-        private void ProcessMessage(byte[] messageData, AsyncUserToken token, SocketAsyncEventArgs e)
+        private void ProcessMessage(byte[] messageData, AsyncUserToken token)
         {
             ReceivedMessage?.Invoke(new MessageData {Message = messageData, Token = token});
         }

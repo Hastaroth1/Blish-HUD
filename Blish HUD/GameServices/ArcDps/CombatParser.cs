@@ -60,6 +60,7 @@ namespace Blish_HUD.ArcDps
             byte pad62;
             byte pad63;
             byte pad64;
+
             (time, offset) = U64(data, offset);
             (srcAgent, offset) = U64(data, offset);
             (dstAgent, offset) = U64(data, offset);
